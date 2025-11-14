@@ -82,6 +82,8 @@ class push(gym.Env):
 
         mujoco.mj_resetData(self.model, self.data)
 
+
+        #========RANDOM TARGET AND INITIAL STATE=========
         x0 = self.np_random.uniform(-0.5, 0.5)
         v0 = 0.0
         self._set_block_state(x0, v0)
@@ -89,7 +91,7 @@ class push(gym.Env):
         #sample random target position
         self.x_target = self.np_random.uniform(self.target_min, self.target_max)
         self._set_target_pos(self.x_target)
-
+        #===============================================
         self.step_count = 0
         obs = self._get_obs()
         info = {}
@@ -155,45 +157,4 @@ class push(gym.Env):
             pass
 
 
-
-
-# class gym:
-#     def __init__(self):
-#         pass
-#     def create_env(self):
-#         pass
-#     def reset_env(self):
-#         pass
-#     def step_env(self):
-#         pass
-
-# class control:
-#     def __init__(self):
-#         pass
-#     def keyboard(self):
-#         pass
-#     def handpose(self):
-#         pass
-#     def logging(self):
-#         pass
-
-# class rendering:
-#     def __init__(self):
-#         pass
-#     def live_display(self):
-#         pass
-#     def trained_display(self):
-#         pass
-
-# class learning:
-#     def __init__(self):
-#         pass
-#     def train_model(self):
-#         pass
-#     def load_model(self):
-#         pass
-#     def save_model(self):
-#         pass
-#     def evaluate_model(self):
-#         pass
 
