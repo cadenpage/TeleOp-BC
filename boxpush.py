@@ -1,12 +1,10 @@
-import mediapipe
 import cv2
 import mujoco
 import mujoco.viewer
 import gymnasium as gym
-import pygame
 from gymnasium import spaces
 import numpy as np
-from pathlib import Path
+
 
 
 
@@ -24,7 +22,7 @@ class push(gym.Env):
 
         # Initialize environment components here
         self.dt = self.model.opt.timestep
-
+        # we need the relevant ids to easily get states of them later
         self.joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "slider_x")
         self.body_target_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "target")
         self.target_mocap_id = self.model.body_mocapid[self.body_target_id]
@@ -37,6 +35,7 @@ class push(gym.Env):
         self.Fmax = 10.0
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
 
+        # observation space: block position, block velocity, relative position to target
         self.max_steps = 200
         self.step_count = 0
 
@@ -126,7 +125,7 @@ class push(gym.Env):
         x, v = self._get_block_state()
         x_err = x - self.x_target
 
-        reward = -abs(x_err) - 0.001 * (F ** 2)
+        reward = -abs(x_err) - 0.001 * (F ** 2) 
         terminated = False
         epsilon = 0.02  # success radius
         # success = (abs(x_err) < epsilon) # we dont need this right now, but it will be good for latter to classift successed for training
