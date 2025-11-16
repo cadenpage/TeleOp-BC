@@ -13,7 +13,8 @@ from boxpush import push
 
 # add command line arguments for if you want to use mediapipe or keyboard control
 # this also allows us to change the amount of episodes to run, and other parameters
-# most of the time, we want to run <python teleop.py --control mediapipe --show-hand-debug>  
+# for mediapipe teleop, we wanna run <python teleop.py --control mediapipe --show-hand-debug> 
+# for visualizing the trained policy, we wanna run <python teleop.py --control policy --policy-path policy.pt> 
 def parse_args():
     parser = argparse.ArgumentParser(description="Teleoperate the box pushing task.")
     parser.add_argument(
@@ -22,7 +23,7 @@ def parse_args():
         default="keyboard",
         help="Select control modality.",
     )
-    parser.add_argument("--episodes", type=int, default=10, help="Number of rollouts to collect.")
+    parser.add_argument("--episodes", type=int, default=8, help="Number of rollouts to collect.")
     parser.add_argument(
         "--render-mode",
         default="human",
