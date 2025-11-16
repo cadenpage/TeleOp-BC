@@ -2,12 +2,12 @@ import mediapipe
 import cv2
 import mujoco
 import mujoco.viewer
-import multiprocessing
 import gymnasium as gym
 import pygame
 from gymnasium import spaces
 import numpy as np
 from pathlib import Path
+
 
 
 xml_path = "boxpush.xml"
@@ -23,12 +23,15 @@ class push(gym.Env):
         self.data = mujoco.MjData(self.model)
 
         # Initialize environment components here
-
         self.dt = self.model.opt.timestep
 
         self.joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "slider_x")
         self.body_target_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "target")
-        self.actuator_id = 0
+        self.target_mocap_id = self.model.body_mocapid[self.body_target_id]
+        if self.target_mocap_id < 0:
+            raise ValueError("Target body must be marked as mocap='true' to move it dynamically.")
+        self.target_default_pos = self.model.body_pos[self.body_target_id].copy()
+        self.actuator_id = 0  # only one actuator
 
         #action space
         self.Fmax = 10.0
@@ -37,8 +40,13 @@ class push(gym.Env):
         self.max_steps = 200
         self.step_count = 0
 
-        self.target_min = -0.8
-        self.target_max = 0.8
+        self.target_min = 0.0
+        self.target_max = 0.5
+
+        # movement tracking for termination logic
+        self.move_threshold = 0.01
+        self.stop_threshold = 0.005
+        self.stop_delay = 0.5  # seconds to wait after stopping
 
         self.render_mode = render_mode
         self.viewer = None
@@ -64,9 +72,11 @@ class push(gym.Env):
         mujoco.mj_forward(self.model, self.data)
 
     def _set_target_pos(self, pos):
-        """Set target position by modifying the target body position via XML or kinematic forward pass."""
-
-        pass
+        """Set target marker position by moving its mocap body."""
+        target_pos = self.target_default_pos.copy()
+        target_pos[0] = pos
+        self.data.mocap_pos[self.target_mocap_id] = target_pos
+        mujoco.mj_forward(self.model, self.data)
 
     def _get_obs(self):
         """Get observation: [block_x, block_v, relative_pos_to_target]."""
@@ -83,15 +93,18 @@ class push(gym.Env):
         mujoco.mj_resetData(self.model, self.data)
 
 
-        #========RANDOM TARGET AND INITIAL STATE=========
-        x0 = self.np_random.uniform(-0.5, 0.5)
+        #Constant initial block state
+        x0 = -0.5
         v0 = 0.0
         self._set_block_state(x0, v0)
 
-        #sample random target position
+        # Track when the block has moved and when it stops
+        self.has_moved = False
+        self.stop_timer = None
+
+        #Random target position
         self.x_target = self.np_random.uniform(self.target_min, self.target_max)
         self._set_target_pos(self.x_target)
-        #===============================================
         self.step_count = 0
         obs = self._get_obs()
         info = {}
@@ -114,14 +127,30 @@ class push(gym.Env):
         x_err = x - self.x_target
 
         reward = -abs(x_err) - 0.001 * (F ** 2)
-
+        terminated = False
         epsilon = 0.02  # success radius
-        terminated = (abs(x_err) < epsilon)
+        # success = (abs(x_err) < epsilon) # we dont need this right now, but it will be good for latter to classift successed for training
         truncated = (self.step_count >= self.max_steps)
+
+        # detect motion start + stop, terminate 0.5s after stopping
+        if not self.has_moved and abs(v) > self.move_threshold:
+            self.has_moved = True
+            self.stop_timer = None
+
+        if self.has_moved:
+            if abs(v) < self.stop_threshold:
+                if self.stop_timer is None:
+                    self.stop_timer = 0.0
+                else:
+                    self.stop_timer += self.dt
+                if self.stop_timer >= self.stop_delay:
+                    terminated = True
+            else:
+                self.stop_timer = None
 
         info = {}
 
-        #   optionally render
+        #  optionally render
         if self.render_mode == "human":
             self.render()
 
@@ -140,7 +169,7 @@ class push(gym.Env):
             try:
                 self.renderer.update_scene(self.data)
                 img = self.renderer.render()
-               
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                 cv2.imshow("MuJoCo Simulation", img)
                 cv2.waitKey(1) 
             except Exception:
@@ -155,6 +184,4 @@ class push(gym.Env):
             cv2.destroyAllWindows()
         except Exception:
             pass
-
-
 

@@ -4,7 +4,7 @@
     
     <default>
         <geom type="box" size="0.05 0.05 0.05" rgba="0.3 0.6 0.8 1"/>
-        <joint damping="0.1"/>
+        <joint damping="5"/>
     </default>
 
     <worldbody>
@@ -13,12 +13,12 @@
     #box to push
         <body name="box" pos="0 0 0.05">
             <joint name="slider_x" type="slide" axis="1 0 0" limited="false"/>
-            <geom name="box_geom" size="0.05 0.05 0.05" rgba="0.9 0.2 0.2 1"/>
+            <geom name="box_geom" size="0.05 0.05 0.05" rgba="0.2 0.2 0.9 1" contype="0" conaffinity="0"/>
         </body>
 
     #target marker
-    <body name="target" pos="0 0 0.05">
-        <geom name="target_geom" type="sphere" size="0.03" rgba="0.2 0.9 0.2 0.5"/>
+    <body name="target" mocap="true" pos="0 0 0.05">
+        <geom name="target_geom" type="cylinder" size="0.03 0.001" rgba="1.0 0.0 0.0 0.5"/>
     </body>
 
 </worldbody>
@@ -28,4 +28,3 @@
 </actuator>
 
 </mujoco>
-
