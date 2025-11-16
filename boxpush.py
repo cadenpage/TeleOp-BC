@@ -163,12 +163,39 @@ class push(gym.Env):
         
         if self.viewer is not None:
             # Live viewer is available
+            force = float(self.data.ctrl[self.actuator_id])
+            self.viewer.add_overlay(
+                mujoco.viewer.Overlay.fast,
+                "Actuator",
+                f"Force: {force:+.2f} N",
+            )
             self.viewer.sync()
         else:
       
             try:
                 self.renderer.update_scene(self.data)
                 img = self.renderer.render()
+                force = float(self.data.ctrl[self.actuator_id])
+                cv2.putText(
+                    img,
+                    f"Force: {force:+.2f} N",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (0, 0, 0),
+                    3,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    img,
+                    f"Force: {force:+.2f} N",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    1,
+                    cv2.LINE_AA,
+                )
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                 cv2.imshow("MuJoCo Simulation", img)
                 cv2.waitKey(1) 
@@ -184,4 +211,3 @@ class push(gym.Env):
             cv2.destroyAllWindows()
         except Exception:
             pass
-
