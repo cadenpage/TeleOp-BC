@@ -1,10 +1,13 @@
 import argparse
 import math
 from typing import List, Tuple
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import pygame
+import torch
+import torch.nn as nn
 
 from boxpush import push
 
@@ -15,11 +18,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Teleoperate the box pushing task.")
     parser.add_argument(
         "--control",
-        choices=["keyboard", "mediapipe"],
+        choices=["keyboard", "mediapipe", "policy"],
         default="keyboard",
         help="Select control modality.",
     )
-    parser.add_argument("--episodes", type=int, default=20, help="Number of rollouts to collect.")
+    parser.add_argument("--episodes", type=int, default=10, help="Number of rollouts to collect.")
     parser.add_argument(
         "--render-mode",
         default="human",
@@ -43,6 +46,12 @@ def parse_args():
         "--show-hand-debug",
         action="store_true",
         help="Display annotated camera feed when using MediaPipe.",
+    )
+    parser.add_argument(
+        "--policy-path",
+        type=str,
+        default="policy.pt",
+        help="Path to a trained behavior cloning policy checkpoint.",
     )
     return parser.parse_args()
 
@@ -89,6 +98,7 @@ class MediaPipeHandController:
         self._last_force = 0.0
 
 
+    @staticmethod
     def _euclidean_dist(lm1, lm2):
         dx = lm1.x - lm2.x
         dy = lm1.y - lm2.y
@@ -173,6 +183,53 @@ class MediaPipeHandController:
             cv2.destroyWindow(self._window_name)
 
 
+class BehaviorCloningPolicy(nn.Module):
+    """Simple MLP with tanh output to mimic teleop actions."""
+
+    def __init__(self, obs_dim: int, hidden_sizes: List[int]):
+        super().__init__()
+        layers: List[nn.Module] = []
+        last_dim = obs_dim
+        for size in hidden_sizes:
+            layers.append(nn.Linear(last_dim, size))
+            layers.append(nn.ReLU())
+            last_dim = size
+        layers.append(nn.Linear(last_dim, 1))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        out = self.net(obs)
+        return torch.tanh(out)
+
+
+class PolicyController:
+    """Loads a trained behavior cloning policy and produces actions from observations."""
+
+    def __init__(self, checkpoint_path: str, device: str = "cpu"):
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        hidden_sizes = ckpt.get("hidden_sizes", [64, 64])
+        obs_dim = ckpt.get("obs_dim")
+        if obs_dim is None:
+            obs_dim = ckpt["obs_mean"].shape[0]
+        self.device = torch.device(device)
+        self.model = BehaviorCloningPolicy(obs_dim, hidden_sizes).to(self.device)
+        self.model.load_state_dict(ckpt["model_state"])
+        self.model.eval()
+
+        self.obs_mean = ckpt["obs_mean"].to(self.device)
+        self.obs_std = ckpt["obs_std"].to(self.device)
+        self.obs_std = torch.where(self.obs_std < 1e-6, torch.ones_like(self.obs_std), self.obs_std)
+        self._cached_action = np.zeros(1, dtype=np.float32)
+
+    def get_action(self, obs: np.ndarray) -> np.ndarray:
+        obs_tensor = torch.from_numpy(obs.astype(np.float32)).unsqueeze(0).to(self.device)
+        obs_norm = (obs_tensor - self.obs_mean) / self.obs_std
+        with torch.no_grad():
+            action = self.model(obs_norm).cpu().numpy()
+        self._cached_action[0] = action[0, 0]
+        return self._cached_action
+
+
 def run_keyboard(args) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     pygame.init()
     
@@ -251,6 +308,34 @@ def run_mediapipe(args) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     return demos_obs, demos_act
 
 
+def run_policy(args) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    env = push(render_mode=args.render_mode)
+    controller = PolicyController(args.policy_path)
+    demos_obs: List[np.ndarray] = []
+    demos_act: List[np.ndarray] = []
+
+    try:
+        for ep in range(args.episodes):
+            obs, info = env.reset()
+            done = False
+            print(f"Episode {ep+1}/{args.episodes} - target={env.x_target:.3f}")
+
+            while not done:
+                action = controller.get_action(obs)
+                next_obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+
+                demos_obs.append(obs)
+                demos_act.append(action.copy())
+                obs = next_obs
+
+            print("Episode end")
+    finally:
+        env.close()
+
+    return demos_obs, demos_act
+
+
 def save_demos(demos_obs: List[np.ndarray], demos_act: List[np.ndarray]):
     if not demos_obs or not demos_act:
         return
@@ -266,6 +351,8 @@ def main():
 
     if args.control == "mediapipe":
         demos_obs, demos_act = run_mediapipe(args)
+    elif args.control == "policy":
+        demos_obs, demos_act = run_policy(args)
     else:
         demos_obs, demos_act = run_keyboard(args)
 
