@@ -1,6 +1,7 @@
 import argparse
 import math
 from typing import List, Tuple
+from pathlib import Path
 
 import cv2
 import mediapipe as mp
@@ -43,7 +44,7 @@ def parse_args():
         default="keyboard",
         help="Select control modality.",
     )
-    parser.add_argument("--episodes", type=int, default=8, help="Number of rollouts to collect.")
+    parser.add_argument("--episodes", type=int, default=5, help="Number of rollouts to collect.")
     parser.add_argument(
         "--render-mode",
         default="human",
@@ -341,14 +342,19 @@ def run_policy(args) -> Tuple[List[np.ndarray], List[np.ndarray]]:
 def save_demos(demos_obs: List[np.ndarray], demos_act: List[np.ndarray],mode:str):
     if not demos_obs or not demos_act:
         return
+    
+    # Create data directory if it doesn't exist
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+    
     demos_obs_arr = np.stack(demos_obs)
     demos_act_arr = np.stack(demos_act)
     if mode == "policy":
-        obs_filename = "policy_obs.npy"
-        act_filename = "policy_act.npy"
+        obs_filename = data_dir / "policy_obs.npy"
+        act_filename = data_dir / "policy_act.npy"
     else:
-        obs_filename = "demos_obs.npy"
-        act_filename = "demos_act.npy"
+        obs_filename = data_dir / "demos_obs.npy"
+        act_filename = data_dir / "demos_act.npy"
     np.save(obs_filename, demos_obs_arr)
     np.save(act_filename, demos_act_arr)
     print(f"Saved {mode} data to {obs_filename} and {act_filename}")

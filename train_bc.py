@@ -67,9 +67,10 @@ def compute_normalizer(obs: torch.Tensor) -> Normalizer:
 
 
 def main():
-    obs_path = "demos_obs.npy"
-    act_path = "demos_act.npy"
-    output_path = pathlib.Path("policy.pt")
+    data_dir = pathlib.Path("data")
+    obs_path = data_dir / "demos_obs.npy"
+    act_path = data_dir / "demos_act.npy"
+    output_path = data_dir / "policy.pt"
     hidden_sizes = [64, 64]
     batch_size = 128
     epochs = 50
@@ -77,7 +78,7 @@ def main():
     val_frac = 0.1
     device = torch.device("cpu")
 
-    obs_np, act_np = load_data(obs_path, act_path)
+    obs_np, act_np = load_data(str(obs_path), str(act_path))
     dataset = DemoDataset(obs_np, act_np)
 
     val_size = int(len(dataset) * val_frac)
