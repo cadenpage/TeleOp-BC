@@ -184,25 +184,6 @@ class MediaPipeHandController:
             cv2.destroyWindow(self._window_name)
 
 
-class BehaviorCloningPolicy(nn.Module):
-    """Simple MLP with tanh output to mimic teleop actions."""
-
-    def __init__(self, obs_dim: int, hidden_sizes: List[int]):
-        super().__init__()
-        layers: List[nn.Module] = []
-        last_dim = obs_dim
-        for size in hidden_sizes:
-            layers.append(nn.Linear(last_dim, size))
-            layers.append(nn.ReLU())
-            last_dim = size
-        layers.append(nn.Linear(last_dim, 1))
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, obs: torch.Tensor) -> torch.Tensor:
-        out = self.net(obs)
-        return torch.tanh(out)
-
-
 class PolicyController:
     """Loads a trained behavior cloning policy and produces actions from observations."""
 

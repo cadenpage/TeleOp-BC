@@ -1,6 +1,5 @@
 import cv2
 import mujoco
-import mujoco.viewer
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -48,15 +47,11 @@ class push(gym.Env):
         self.stop_delay = 0.5  # seconds to wait after stopping
 
         self.render_mode = render_mode
-        self.viewer = None
+        self.renderer = None
         
         if self.render_mode == "human":
-            try:
-                self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
-            except Exception:
-                # Fallback: use offline rendering with pixel data
-                self.renderer = mujoco.Renderer(self.model, height=480, width=640)
-                print("Using offline rendering (headless mode with frame output)")
+            # Use offline rendering with pixel data for OpenCV display
+            self.renderer = mujoco.Renderer(self.model, height=480, width=640)
 
     def _get_block_state(self):
         """Get block position and velocity from mujoco."""
@@ -156,56 +151,41 @@ class push(gym.Env):
         return obs, reward, terminated, truncated, info
 
     def render(self):
-        """Render the environment using MuJoCo viewer or offline renderer."""
+        """Render the environment using OpenCV display."""
         if self.render_mode == "none":
             return
         
-        if self.viewer is not None:
-            # Live viewer is available
+        try:
+            self.renderer.update_scene(self.data)
+            img = self.renderer.render()
             force = float(self.data.ctrl[self.actuator_id])
-            self.viewer.add_overlay(
-                mujoco.viewer.Overlay.fast,
-                "Actuator",
+            cv2.putText(
+                img,
                 f"Force: {force:+.2f} N",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 0, 0),
+                3,
+                cv2.LINE_AA,
             )
-            self.viewer.sync()
-        else:
-      
-            try:
-                self.renderer.update_scene(self.data)
-                img = self.renderer.render()
-                force = float(self.data.ctrl[self.actuator_id])
-                cv2.putText(
-                    img,
-                    f"Force: {force:+.2f} N",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0, 0, 0),
-                    3,
-                    cv2.LINE_AA,
-                )
-                cv2.putText(
-                    img,
-                    f"Force: {force:+.2f} N",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (255, 255, 255),
-                    1,
-                    cv2.LINE_AA,
-                )
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-                cv2.imshow("MuJoCo Simulation", img)
-                cv2.waitKey(1) 
-            except Exception:
-                pass 
+            cv2.putText(
+                img,
+                f"Force: {force:+.2f} N",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            cv2.imshow("MuJoCo Simulation", img)
+            cv2.waitKey(1) 
+        except Exception:
+            pass 
 
     def close(self):
-       
-        if self.viewer is not None:
-            self.viewer.close()
-            self.viewer = None
         try:
             cv2.destroyAllWindows()
         except Exception:
