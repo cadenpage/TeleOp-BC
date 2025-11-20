@@ -11,6 +11,26 @@ import torch.nn as nn
 
 from boxpush import push
 
+
+class BehaviorCloningPolicy(nn.Module):
+    """Simple MLP with tanh output to mimic teleop actions."""
+
+    def __init__(self, obs_dim: int, hidden_sizes: List[int]):
+        super().__init__()
+        layers: List[nn.Module] = []
+        last_dim = obs_dim
+        for size in hidden_sizes:
+            layers.append(nn.Linear(last_dim, size))
+            layers.append(nn.ReLU())
+            last_dim = size
+        layers.append(nn.Linear(last_dim, 1))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        out = self.net(obs)
+        return torch.tanh(out)
+
+
 # add command line arguments for if you want to use mediapipe or keyboard control
 # this also allows us to change the amount of episodes to run, and other parameters
 # for mediapipe teleop, we wanna run <python teleop.py --control mediapipe --show-hand-debug> 

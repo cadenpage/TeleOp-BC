@@ -3,6 +3,7 @@ import mujoco
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+import time
 
 
 
@@ -35,7 +36,7 @@ class push(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
 
         # observation space: block position, block velocity, relative position to target
-        self.max_steps = 200
+        self.max_steps = 500
         self.step_count = 0
 
         self.target_min = 0.0
@@ -181,7 +182,7 @@ class push(gym.Env):
             )
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
             cv2.imshow("MuJoCo Simulation", img)
-            cv2.waitKey(1) 
+            cv2.waitKey(int(self.model.opt.timestep * 1000))  # Wait for timestep duration in ms
         except Exception:
             pass 
 
