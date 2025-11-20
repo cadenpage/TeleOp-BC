@@ -124,7 +124,7 @@ Input (3) → Dense(64) + ReLU → Dense(64) + ReLU → Output(1) + Tanh
 ## Example Workflow
 
 ```bash
-# 1. Collect 20 keyboard demonstrations
+# 1. Collect 10 keyboard demonstrations
 python teleop.py --control mediapipe --episodes 10 --show-hand-debug
 # Data saved to: data/demos_obs.npy, data/demos_act.npy
 
