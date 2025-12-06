@@ -27,7 +27,7 @@ A complete imitation learning system for robotic manipulation using behavioral c
 
 1. **Clone the repository:**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/cadenpage/TeleOp-BC
    cd TeleOp-BC
    ```
 
@@ -40,7 +40,7 @@ A complete imitation learning system for robotic manipulation using behavioral c
 3. **Verify installation:**
    ```bash
    conda env list  # Should show 'bc' environment
-   python -c "import mujoco; import torch; print('✓ Setup complete')"
+   python -c "import mujoco; import torch; print('Setup complete')"
    ```
 
 ## Usage
@@ -124,7 +124,7 @@ Input (3) → Dense(64) + ReLU → Dense(64) + ReLU → Output(1) + Tanh
 ## Example Workflow
 
 ```bash
-# 1. Collect 10 keyboard demonstrations
+# 1. Collect 10 mujoco demonstrations
 python teleop.py --control mediapipe --episodes 10 --show-hand-debug
 # Data saved to: data/demos_obs.npy, data/demos_act.npy
 
