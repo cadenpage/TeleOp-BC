@@ -1,0 +1,16 @@
+name: bc
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - numpy
+      - matplotlib
+      - gymnasium
+      - mujoco
+      - pygame
+      - opencv-python
+      - torch
+      - mediapipe
