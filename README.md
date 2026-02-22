@@ -147,7 +147,3 @@ TeleOp-BC/
     ├── evaluation.py
     └── environment.yaml
 ```
-
----
-
-Built as an end-to-end imitation learning project for robotics-focused portfolio work.
