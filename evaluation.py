@@ -3,12 +3,12 @@ import numpy as np
 Fmax = 10.0
 
 # Human teleop
-human_obs = np.load("demos_obs.npy")  # shape (timesteps, obs_dim)
-human_act = np.load("demos_act.npy")  # shape (timesteps, 1)
+human_obs = np.load("data/demos_obs.npy")  # shape (timesteps, obs_dim)
+human_act = np.load("data/demos_act.npy")  # shape (timesteps, 1)
 
 # Policy
-policy_obs = np.load("policy_obs.npy")
-policy_act = np.load("policy_act.npy")
+policy_obs = np.load("data/policy_obs.npy")
+policy_act = np.load("data/policy_act.npy")
 
 force_human = human_act * Fmax  # shape same as act
 force_policy = policy_act * Fmax  # shape same as act
@@ -36,7 +36,7 @@ print("Mean absolute error policy:", policy_mae)
 import matplotlib.pyplot as plt
 
 dt = 0.01  # adjust to your environment timestep
-episodes = 8  # same as used in teleop.py
+episodes = 4  # same as used in teleop.py
 
 def compute_episode_work(obs, act, Fmax, dt, episodes):
     steps_per_ep = len(obs) // episodes
